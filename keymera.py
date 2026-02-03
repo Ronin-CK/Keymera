@@ -1,3 +1,42 @@
+#!/usr/bin/env python3
+"""
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  KEYMERA v2.1 - AI-Powered Text Expansion Daemon for Wayland                  ║
+║  Transforms your keystrokes into polished text using AI                       ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+Requirements:
+    pip install evdev google-generativeai aiohttp
+
+System Requirements:
+    - wl-clipboard: sudo pacman -S wl-clipboard (or apt install wl-clipboard)
+    - uinput module: sudo modprobe uinput
+    - Add user to input group: sudo usermod -aG input $USER && newgrp input
+
+Setup:
+    1. Copy config.example.json to config.json and edit settings
+    2. Create secrets.json with your API keys
+    3. Customize styles.json as needed
+    4. Run: python3 keymera.py (after adding to input group)
+    
+Special Commands:
+    %style your text%  → Transform text with style
+    %last%             → Repeat last transformation
+    %regen%            → Regenerate with different output
+    %%                 → Cancel/clear buffer
+    ESC                → Cancel in-progress transformation
+    
+CLI Commands:
+    --list             → List all available styles
+    --model            → Show current AI provider/model
+    --set-model NAME   → Switch provider or model
+    --add NAME INSTR   → Add/update a custom style
+    --remove NAME      → Remove a custom style
+    
+Repository: https://github.com/yourusername/keymera
+License: MIT
+"""
+
 import asyncio
 import re
 import os
@@ -77,3 +116,17 @@ def check_dependencies() -> bool:
     # Check for clipboard tools
     wl_copy = subprocess.run(['which', 'wl-copy'], capture_output=True)
     wl_paste = subprocess.run(['which', 'wl-paste'], capture_output=True)
+    
+    if wl_copy.returncode != 0 or wl_paste.returncode != 0:
+        print("⚠ Warning: wl-clipboard not found. Install it:")
+        print("  sudo pacman -S wl-clipboard  # Arch")
+        print("  sudo apt install wl-clipboard  # Debian/Ubuntu")
+        
+    return True
+
+
+if not check_dependencies():
+    sys.exit(1)
+
+from evdev import InputDevice, UInput, ecodes, categorize, KeyEvent, list_devices
+from providers import get_provider
